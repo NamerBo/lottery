@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>微信群抽奖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36D399',
+                        accent: '#FF9F43',
+                        dark: '#1E293B',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .prize-animation {
+                animation: prize-roll 0.05s linear infinite;
+            }
+            @keyframes prize-roll {
+                0% { transform: translateY(0); }
+                100% { transform: translateY(-1.5rem); }
+            }
+            .confetti {
+                position: absolute;
+                width: 10px;
+                height: 10px;
+                opacity: 0;
+                pointer-events: none;
+            }
+            .btn-hover {
+                transition: all 0.3s ease;
+            }
+            .btn-hover:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+            .admin-panel {
+                transition: all 0.5s ease;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- 顶部导航 -->
+    <header class="bg-primary text-white shadow-md py-4">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-2xl font-bold flex items-center justify-center">
+                <i class="fa fa-gift mr-2"></i>
+                微信群抽奖
+            </h1>
+            <p class="text-sm mt-1 opacity-90">公平、公正、公开</p>
+        </div>
+    </header>
+
+    <!-- 管理员面板 -->
+    <div id="adminPanel" class="admin-panel bg-white rounded-xl shadow-lg p-6 mb-6 mx-4">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-dark flex items-center">
+                <i class="fa fa-cog text-primary mr-2"></i>
+                管理员设置
+            </h2>
+            <button id="toggleAdminPanel" class="text-gray-500 hover:text-gray-700">
+                <i class="fa fa-chevron-down"></i>
+            </button>
+        </div>
+        
+        <div id="adminPanelContent">
+            <!-- 参与者输入区域 -->
+            <div class="mb-4">
+                <textarea 
+                    id="participants" 
+                    class="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all resize-none"
+                    placeholder="请输入参与者姓名，每行一个..."
+                ></textarea>
+            </div>
+            
+            <!-- 中奖人数设置 -->
+            <div class="flex flex-wrap gap-4 items-center mb-4">
+                <div class="flex items-center">
+                    <label for="winnerCount" class="mr-2 font-medium text-gray-700">中奖人数：</label>
+                    <input 
+                        type="number" 
+                        id="winnerCount" 
+                        min="1" 
+                        value="1" 
+                        class="w-20 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                    >
+                </div>
+                
+                <!-- 密码保护 -->
+                <div class="flex items-center">
+                    <label for="adminPassword" class="mr-2 font-medium text-gray-700">管理密码：</label>
+                    <input 
+                        type="password" 
+                        id="adminPassword" 
+                        placeholder="设置密码" 
+                        class="w-40 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                    >
+                </div>
+            </div>
+            
+            <!-- 保存设置按钮 -->
+            <button 
+                id="saveSettingsBtn" 
+                class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow transition-all btn-hover flex items-center justify-center"
+            >
+                <i class="fa fa-save mr-2"></i>
+                保存设置
+            </button>
+            
+            <!-- 提示信息 -->
+            <div id="settingsSaved" class="mt-3 p-3 bg-green-100 text-green-700 rounded-lg hidden">
+                <i class="fa fa-check-circle mr-2"></i>
+                设置已保存！请点击下方"开始抽奖"按钮
+            </div>
+        </div>
+    </div>
+
+    <!-- 抽奖按钮区域 -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6 mx-4">
+        <h2 class="text-xl font-bold text-dark mb-4 text-center">
+            抽奖区域
+        </h2>
+        
+        <div class="text-center mb-4">
+            <p class="text-gray-600">点击下方按钮开始抽奖</p>
+        </div>
+        
+        <!-- 开始抽奖按钮 -->
+        <button 
+            id="drawBtn" 
+            class="w-full bg-accent hover:bg-amber-500 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all btn-hover flex items-center justify-center text-lg"
+            disabled
+            style="opacity: 0.7; cursor: not-allowed;"
+        >
+            <i class="fa fa-random mr-2"></i>
+            开始抽奖
+        </button>
+    </div>
+    
+    <!-- 抽奖结果区域 -->
+    <div id="resultContainer" class="bg-white rounded-xl shadow-lg p-6 mb-6 mx-4 hidden">
+        <h2 class="text-xl font-bold text-dark mb-4 flex items-center justify-center">
+            <i class="fa fa-trophy text-accent mr-2"></i>
+            中奖名单
+        </h2>
+        <div id="resultArea" class="min-h-60 flex items-center justify-center">
+            <div id="rollingContainer" class="relative overflow-hidden w-full h-32">
+                <div id="rollingText" class="text-4xl md:text-5xl font-bold text-primary text-center prize-animation">
+                    准备开始...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white py-3 text-center text-sm">
+        <p>© 2023 微信群抽奖工具 | 公平公正 · 随机抽取</p>
+    </footer>
+
+    <!-- 彩带动画容器 -->
+    <div id="confettiContainer" class="fixed top-0 left-0 w-full h-full pointer-events-none z-50 hidden"></div>
+
+    <!-- 密码验证模态框 -->
+    <div id="passwordModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <h3 class="text-xl font-bold text-dark mb-4 text-center">
+                输入管理密码
+            </h3>
+            <div class="mb-4">
+                <input 
+                    type="password" 
+                    id="verifyPassword" 
+                    placeholder="请输入管理密码" 
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                >
+            </div>
+            <div class="flex gap-3">
+                <button 
+                    id="verifyBtn" 
+                    class="flex-1 bg-primary hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow transition-all btn-hover"
+                >
+                    确认
+                </button>
+                <button 
+                    id="cancelVerifyBtn" 
+                    class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-6 rounded-lg shadow transition-all btn-hover"
+                >
+                    取消
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const adminPanel = document.getElementById('adminPanel');
+        const adminPanelContent = document.getElementById('adminPanelContent');
+        const toggleAdminPanel = document.getElementById('toggleAdminPanel');
+        const participantsInput = document.getElementById('participants');
+        const winnerCountInput = document.getElementById('winnerCount');
+        const adminPasswordInput = document.getElementById('adminPassword');
+        const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+        const settingsSaved = document.getElementById('settingsSaved');
+        const drawBtn = document.getElementById('drawBtn');
+        const resultContainer = document.getElementById('resultContainer');
+        const rollingText = document.getElementById('rollingText');
+        const confettiContainer = document.getElementById('confettiContainer');
+        const passwordModal = document.getElementById('passwordModal');
+        const verifyPasswordInput = document.getElementById('verifyPassword');
+        const verifyBtn = document.getElementById('verifyBtn');
+        const cancelVerifyBtn = document.getElementById('cancelVerifyBtn');
+        
+        // 管理员面板折叠/展开
+        let isAdminPanelOpen = true;
+        toggleAdminPanel.addEventListener('click', () => {
+            isAdminPanelOpen = !isAdminPanelOpen;
+            
+            if (isAdminPanelOpen) {
+                adminPanelContent.classList.remove('hidden');
+                toggleAdminPanel.innerHTML = '<i class="fa fa-chevron-down"></i>';
+            } else {
+                adminPanelContent.classList.add('hidden');
+                toggleAdminPanel.innerHTML = '<i class="fa fa-chevron-up"></i>';
+            }
+        });
+        
+        // 保存设置
+        let adminPassword = '';
+        saveSettingsBtn.addEventListener('click', () => {
+            const participants = participantsInput.value.trim();
+            const winnerCount = winnerCountInput.value.trim();
+            
+            if (!participants) {
+                alert('请输入参与者名单！');
+                return;
+            }
+            
+            if (!winnerCount || isNaN(parseInt(winnerCount)) || parseInt(winnerCount) <= 0) {
+                alert('请输入有效的中奖人数！');
+                return;
+            }
+            
+            // 保存密码（如果设置了）
+            adminPassword = adminPasswordInput.value.trim();
+            
+            // 启用抽奖按钮
+            drawBtn.disabled = false;
+            drawBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+            
+            // 显示保存成功提示
+            settingsSaved.classList.remove('hidden');
+            setTimeout(() => {
+                settingsSaved.classList.add('hidden');
+            }, 3000);
+        });
+        
+        // 开始抽奖
+        drawBtn.addEventListener('click', () => {
+            // 如果设置了密码，需要验证
+            if (adminPassword) {
+                passwordModal.classList.remove('hidden');
+                verifyPasswordInput.focus();
+                return;
+            }
+            
+            startDraw();
+        });
+        
+        // 验证密码
+        verifyBtn.addEventListener('click', () => {
+            const password = verifyPasswordInput.value.trim();
+            
+            if (password === adminPassword) {
+                passwordModal.classList.add('hidden');
+                verifyPasswordInput.value = '';
+                startDraw();
+            } else {
+                alert('密码错误！');
+                verifyPasswordInput.value = '';
+                verifyPasswordInput.focus();
+            }
+        });
+        
+        // 取消验证
+        cancelVerifyBtn.addEventListener('click', () => {
+            passwordModal.classList.add('hidden');
+            verifyPasswordInput.value = '';
+        });
+        
+        // 开始抽奖逻辑
+        function startDraw() {
+            const participantsText = participantsInput.value.trim();
+            const participants = participantsText.split('\n')
+                .map(name => name.trim())
+                .filter(name => name);
+                
+            const winnerCount = parseInt(winnerCountInput.value, 10);
+            
+            // 显示结果区域
+            resultContainer.classList.remove('hidden');
+            
+            // 重置滚动文本
+            rollingText.textContent = '抽奖中...';
+            rollingText.classList.add('prize-animation');
+            
+            // 禁用按钮
+            drawBtn.disabled = true;
+            drawBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            
+            // 抽奖动画
+            let animationSteps = 0;
+            const maxSteps = 50; // 动画总步数
+            let animationSpeed = 50; // 初始动画速度(ms)
+            
+            const animationInterval = setInterval(() => {
+                animationSteps++;
+                
+                // 随机选择临时中奖者
+                const tempWinners = [];
+                const tempParticipants = [...participants];
+                
+                for (let i = 0; i < winnerCount; i++) {
+                    if (tempParticipants.length === 0) break;
+                    const randomIndex = Math.floor(Math.random() * tempParticipants.length);
+                    tempWinners.push(tempParticipants[randomIndex]);
+                    tempParticipants.splice(randomIndex, 1);
+                }
+                
+                // 显示临时结果
+                rollingText.textContent = tempWinners.join('\n');
+                
+                // 逐渐减慢动画速度
+                if (animationSteps > maxSteps * 0.7) {
+                    animationSpeed = 150;
+                } else if (animationSteps > maxSteps * 0.5) {
+                    animationSpeed = 100;
+                }
+                
+                // 结束动画
+                if (animationSteps >= maxSteps) {
+                    clearInterval(animationInterval);
+                    drawFinalWinners(participants, winnerCount);
+                }
+            }, animationSpeed);
+        }
+        
+        // 抽取最终中奖者
+        function drawFinalWinners(participants, winnerCount) {
+            // 随机选择最终中奖者
+            const winners = [];
+            const tempParticipants = [...participants];
+            
+            for (let i = 0; i < winnerCount; i++) {
+                if (tempParticipants.length === 0) break;
+                const randomIndex = Math.floor(Math.random() * tempParticipants.length);
+                winners.push(tempParticipants[randomIndex]);
+                tempParticipants.splice(randomIndex, 1);
+            }
+            
+            // 停止动画并显示最终结果
+            rollingText.classList.remove('prize-animation');
+            rollingText.classList.add('text-accent');
+            rollingText.textContent = winners.join('\n');
+            
+            // 启用按钮
+            drawBtn.disabled = false;
+            drawBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+            
+            // 显示彩带动画
+            showConfetti();
+        }
+        
+        // 显示彩带动画
+        function showConfetti() {
+            confettiContainer.classList.remove('hidden');
+            confettiContainer.innerHTML = '';
+            
+            const colors = ['#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#2196F3', '#03A9F4', '#00BCD4', '#009688', '#4CAF50', '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800', '#FF5722'];
+            
+            for (let i = 0; i < 150; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                
+                // 随机大小和颜色
+                const size = Math.random() * 10 + 5;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                confetti.style.width = `${size}px`;
+                confetti.style.height = `${size}px`;
+                confetti.style.backgroundColor = color;
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                
+                // 随机位置和动画
+                const left = Math.random() * 100;
+                const duration = Math.random() * 4 + 3;
+                const delay = Math.random() * 2;
+                const rotation = Math.random() * 360;
+                
+                confetti.style.left = `${left}%`;
+                confetti.style.animation = `confetti ${duration}s ease-in ${delay}s forwards`;
+                confetti.style.transform = `rotate(${rotation}deg)`;
+                
+                confettiContainer.appendChild(confetti);
+            }
+            
+            // 添加CSS动画
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes confetti {
+                    0% {
+                        transform: translateY(-10px) rotate(0deg);
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: translateY(${window.innerHeight}px) rotate(720deg);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // 5秒后隐藏彩带动画
+            setTimeout(() => {
+                confettiContainer.classList.add('hidden');
+            }, 5000);
+        }
+        
+        // 移动设备上优化体验
+        document.addEventListener('touchstart', function() {}, false);
+    </script>
+</body>
+</html>    
