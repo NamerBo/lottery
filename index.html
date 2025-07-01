@@ -134,6 +134,15 @@
                 <i class="fa fa-check-circle mr-2"></i>
                 设置已保存！请点击下方"开始抽奖"按钮
             </div>
+            
+            <!-- 清除设置按钮 -->
+            <button 
+                id="clearSettingsBtn" 
+                class="w-full mt-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg transition-all flex items-center justify-center text-sm"
+            >
+                <i class="fa fa-trash-o mr-2"></i>
+                清除所有保存的设置
+            </button>
         </div>
     </div>
 
@@ -176,7 +185,7 @@
 
     <!-- 页脚 -->
     <footer class="bg-dark text-white py-3 text-center text-sm">
-        <p>© 2023 微信群抽奖工具 | 公平公正 · 随机抽取</p>
+        <p>© 2025 微信群抽奖工具 | 公平公正 · 随机抽取</p>
     </footer>
 
     <!-- 彩带动画容器 -->
@@ -214,6 +223,53 @@
     </div>
 
     <script>
+        // 从本地存储加载设置
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('lotterySettings');
+            if (savedSettings) {
+                try {
+                    const settings = JSON.parse(savedSettings);
+                    participantsInput.value = settings.participants || '';
+                    winnerCountInput.value = settings.winnerCount || 1;
+                    adminPassword = settings.adminPassword || '';
+                    
+                    // 启用抽奖按钮
+                    if (settings.participants && settings.participants.trim()) {
+                        drawBtn.disabled = false;
+                        drawBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                    }
+                    
+                    return true; // 已加载保存的设置
+                } catch (e) {
+                    console.error('Failed to parse saved settings:', e);
+                }
+            }
+            return false; // 未加载保存的设置
+        }
+        
+        // 保存设置到本地存储
+        function saveSettings() {
+            const settings = {
+                participants: participantsInput.value,
+                winnerCount: winnerCountInput.value,
+                adminPassword: adminPassword
+            };
+            
+            localStorage.setItem('lotterySettings', JSON.stringify(settings));
+        }
+        
+        // 清除保存的设置
+        function clearSettings() {
+            localStorage.removeItem('lotterySettings');
+            participantsInput.value = '';
+            winnerCountInput.value = 1;
+            adminPassword = '';
+            drawBtn.disabled = true;
+            drawBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            
+            alert('已清除所有保存的设置');
+        }
+        
         // 获取DOM元素
         const adminPanel = document.getElementById('adminPanel');
         const adminPanelContent = document.getElementById('adminPanelContent');
@@ -222,6 +278,7 @@
         const winnerCountInput = document.getElementById('winnerCount');
         const adminPasswordInput = document.getElementById('adminPassword');
         const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+        const clearSettingsBtn = document.getElementById('clearSettingsBtn');
         const settingsSaved = document.getElementById('settingsSaved');
         const drawBtn = document.getElementById('drawBtn');
         const resultContainer = document.getElementById('resultContainer');
@@ -265,6 +322,9 @@
             // 保存密码（如果设置了）
             adminPassword = adminPasswordInput.value.trim();
             
+            // 保存设置到本地存储
+            saveSettings();
+            
             // 启用抽奖按钮
             drawBtn.disabled = false;
             drawBtn.classList.remove('opacity-70', 'cursor-not-allowed');
@@ -275,6 +335,9 @@
                 settingsSaved.classList.add('hidden');
             }, 3000);
         });
+        
+        // 清除设置
+        clearSettingsBtn.addEventListener('click', clearSettings);
         
         // 开始抽奖
         drawBtn.addEventListener('click', () => {
@@ -449,6 +512,9 @@
         
         // 移动设备上优化体验
         document.addEventListener('touchstart', function() {}, false);
+        
+        // 页面加载时自动加载保存的设置
+        document.addEventListener('DOMContentLoaded', loadSettings);
     </script>
 </body>
 </html>    
